@@ -4,9 +4,7 @@ from dotenv import load_dotenv
 import os
 import numpy as np
 from PIL import Image
-from io import BytesIO
 from keras.models import load_model
-
 
 global experiments_components
 global barcode
@@ -26,7 +24,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 
-# os.environ['MONGO_URI'] = "mongodb://localhost:27017/nexus"
+os.environ['MONGO_URI'] = "mongodb+srv://roshanjohn:2qHaQ3yzchgUyH67@eh.6a9nwj2.mongodb.net/nexus"
 
 load_dotenv()
 CORS(app, methods=['GET', 'POST', 'PUT', 'DELETE'], resources={r"/*": {"origins": "*"}})
@@ -37,8 +35,9 @@ client = MongoClient(os.getenv('MONGO_URI'))
 db = client['nexus']
 users_col = db['users']
 components_col = db['components']
-model = load_model('keras_model2.h5')
-class_names = [line.strip() for line in open("labels2.txt", "r").readlines()]
+fault_col = db['fault']
+model = load_model('eh-flask\keras_model2.h5')
+class_names = [line.strip() for line in open("eh-flask\labels2.txt", "r").readlines()]
 
 
 experiments_components = {
@@ -111,15 +110,20 @@ def return_exp():
         exp_no = request.form.get('exp_no')
         faulty_components = request.form.getlist('faultyComponents[]')
         barcode = session.get('barcode')  # Ensure barcode is correctly retrieved from the session
-
-        # Process the returned components
         if exp_no:
             all_components = experiments_components[exp_no][2:]  # Assuming components start from index 2
 
             for component in all_components:
                 if component in faulty_components:
                     # Insert faulty components into the fault table with userno and component name
-                    db.fault.insert_one({'component_name': component})
+                    try:
+                        fault_col.update_one(
+                            {'component_name': component},
+                            {'$inc': {'quantity': 1}},
+                            upsert=True
+                        )
+                    except Exception as e:
+                        print(f"Error inserting into fault collection: {e}")
                 else:
                     # Increment the quantity of the non-faulty components in the components table
                     components_col.update_one({'name': component}, {'$inc': {'quantity': 1}})
