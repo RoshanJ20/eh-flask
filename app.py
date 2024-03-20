@@ -36,8 +36,8 @@ db = client['nexus']
 users_col = db['users']
 components_col = db['components']
 fault_col = db['fault']
-model = load_model('eh-flask\keras_model2.h5')
-class_names = [line.strip() for line in open("eh-flask\labels2.txt", "r").readlines()]
+model = load_model('keras_model2.h5')
+class_names = [line.strip() for line in open("labels2.txt", "r").readlines()]
 
 
 experiments_components = {
